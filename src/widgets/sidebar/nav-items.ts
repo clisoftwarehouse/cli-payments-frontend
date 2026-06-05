@@ -12,11 +12,12 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange';
 import StackedLineChartIcon from '@mui/icons-material/StackedLineChart';
+import type { SvgIconProps } from '@mui/material';
 
 export type NavItem = {
   to: string;
   label: string;
-  icon: React.ComponentType;
+  icon: React.ComponentType<SvgIconProps>;
   badge?: string;
   section?: string;
 };

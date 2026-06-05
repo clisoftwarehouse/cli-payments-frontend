@@ -20,7 +20,6 @@ import {
   TableCell,
   TableHead,
   TableBody,
-  CardContent,
   IconButton,
   Tooltip,
   TableContainer,

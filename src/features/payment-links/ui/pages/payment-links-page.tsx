@@ -107,7 +107,7 @@ const PaymentLinksPage = () => {
 
       <Grid container spacing={3}>
         {/* ── Formulario ─────────────────────────────────────────────── */}
-        <Grid item xs={12} md={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           <Card variant="outlined" sx={{ p: 3 }}>
             {result ? (
               /* ── Resultado ── */
@@ -300,7 +300,7 @@ const PaymentLinksPage = () => {
         </Grid>
 
         {/* ── Guía lateral ───────────────────────────────────────────── */}
-        <Grid item xs={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <Stack spacing={2}>
             <Card variant="outlined" sx={{ p: 2.5, bgcolor: 'background.neutral' }}>
               <Typography variant="subtitle2" fontWeight={700} gutterBottom>¿Cómo funciona?</Typography>

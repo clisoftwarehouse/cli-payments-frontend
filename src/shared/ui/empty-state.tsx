@@ -1,4 +1,4 @@
-import { Box, Stack, Button, Typography, type SvgIconProps } from '@mui/material';
+import { Box, Stack, Button, Typography } from '@mui/material';
 import type { SvgIconTypeMap } from '@mui/material';
 import type { OverridableComponent } from '@mui/material/OverridableComponent';
 
