@@ -7,6 +7,7 @@ import SendIcon from '@mui/icons-material/Send';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import LinkIcon from '@mui/icons-material/Link';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
 import {
   Box,
   Card,
@@ -32,11 +33,13 @@ import { invoicesApi, type InvoiceDto } from '../../api/invoices-api';
 import { PageHeader } from '@/shared/ui/page-header';
 import { CreateInvoiceDialog } from '../components/create-invoice-dialog';
 import { CheckoutLinkDialog } from '../components/checkout-link-dialog';
+import { ManualPaymentDialog } from '@/features/payments/ui/components/manual-payment-dialog';
 
 const InvoicesPage = () => {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [linkInvoice, setLinkInvoice] = useState<InvoiceDto | null>(null);
+  const [verifyInvoice, setVerifyInvoice] = useState<InvoiceDto | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['invoices'],
@@ -170,6 +173,13 @@ const InvoicesPage = () => {
                             </IconButton>
                           </Tooltip>
                         )}
+                        {inv.status === 'open' && (
+                          <Tooltip title="Verificar / otorgar pago manualmente">
+                            <IconButton size="small" onClick={() => setVerifyInvoice(inv)} sx={{ color: 'text.secondary' }}>
+                              <FactCheckIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
                         <Tooltip title="Descargar PDF">
                           <IconButton size="small" component="a" href={invoicesApi.pdfUrl(inv.id)} target="_blank" rel="noreferrer" sx={{ color: 'text.secondary' }}>
                             <PictureAsPdfIcon fontSize="small" />
@@ -187,6 +197,7 @@ const InvoicesPage = () => {
 
       <CreateInvoiceDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={handleCreated} />
       {linkInvoice && <CheckoutLinkDialog open onClose={() => setLinkInvoice(null)} invoice={linkInvoice} />}
+      <ManualPaymentDialog invoice={verifyInvoice} onClose={() => setVerifyInvoice(null)} />
     </Box>
   );
 };

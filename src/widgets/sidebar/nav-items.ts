@@ -5,6 +5,7 @@ import OutboxIcon from '@mui/icons-material/Outbox';
 import LoyaltyIcon from '@mui/icons-material/Loyalty';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import AddLinkIcon from '@mui/icons-material/AddLink';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
@@ -31,6 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/subscriptions', label: 'Suscripciones', icon: AccountTreeIcon, section: 'Operación' },
   { to: '/invoices', label: 'Facturas', icon: ReceiptLongIcon, section: 'Operación' },
   { to: '/payments', label: 'Pagos', icon: PaymentsIcon, section: 'Operación' },
+  { to: '/manual-verification', label: 'Verificación manual', icon: FactCheckIcon, section: 'Operación' },
   { to: '/payment-links', label: 'Links de pago', icon: AddLinkIcon, section: 'Operación' },
 
   { to: '/payment-accounts', label: 'Cuentas receptoras', icon: AccountBalanceWalletIcon, section: 'Configuración' },

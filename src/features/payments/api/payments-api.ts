@@ -7,7 +7,7 @@ export type PaymentDto = {
   invoiceId: string | null;
   idempotencyKey: string;
   status: 'pending' | 'requires_action' | 'requires_otp' | 'succeeded' | 'failed' | 'canceled';
-  methodKind: 'c2p' | 'transfer' | 'pago_movil' | 'web_button' | 'zelle' | 'card_ccr';
+  methodKind: 'c2p' | 'transfer' | 'pago_movil' | 'web_button' | 'zelle' | 'card_ccr' | 'manual';
   gateway: 'sitef' | 'zelle_manual' | 'manual';
   gatewayReference: string | null;
   displayCurrency: string;
@@ -51,6 +51,20 @@ export const paymentsApi = {
   },
   listAttempts: async (id: string): Promise<PaymentAttemptDto[]> => {
     const { data } = await axiosClient.get<PaymentAttemptDto[]>(`/payments/${id}/attempts`);
+    return data;
+  },
+  /** Verificación manual contra Sitef (transfer / pago_movil) para una factura open. */
+  verify: async (input: {
+    invoiceId: string;
+    method: 'transfer' | 'pago_movil';
+    methodData: Record<string, unknown>;
+  }): Promise<PaymentDto> => {
+    const { data } = await axiosClient.post<PaymentDto>('/payments/verify', input);
+    return data;
+  },
+  /** Force-grant: marca la factura pagada sin cobrar (requiere motivo). */
+  grant: async (input: { invoiceId: string; reason: string }): Promise<PaymentDto> => {
+    const { data } = await axiosClient.post<PaymentDto>('/payments/grant', input);
     return data;
   },
 };
