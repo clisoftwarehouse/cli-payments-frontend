@@ -7,8 +7,13 @@ type Props = {
 };
 
 export const PageHeader = ({ title, subtitle, actions }: Props) => (
-  <Box sx={{ mb: 3 }}>
-    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
+  <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+    <Stack
+      direction={{ xs: 'column', sm: 'row' }}
+      justifyContent="space-between"
+      alignItems={{ xs: 'stretch', sm: 'flex-start' }}
+      spacing={{ xs: 1.5, sm: 2 }}
+    >
       <Box sx={{ minWidth: 0 }}>
         <Typography variant="h5" fontWeight={700} component="div" lineHeight={1.3}>
           {title}
@@ -25,7 +30,13 @@ export const PageHeader = ({ title, subtitle, actions }: Props) => (
         )}
       </Box>
       {actions && (
-        <Stack direction="row" spacing={1} flexShrink={0} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={1}
+          flexShrink={0}
+          alignItems="center"
+          sx={{ '& > *': { flex: { xs: 1, sm: 'initial' } } }}
+        >
           {actions}
         </Stack>
       )}

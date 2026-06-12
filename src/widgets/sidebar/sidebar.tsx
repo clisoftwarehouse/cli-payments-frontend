@@ -30,7 +30,7 @@ const groupBySection = (items: NavItem[]): Group[] => {
   return out;
 };
 
-const NavRow = ({ item }: { item: NavItem }) => {
+const NavRow = ({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) => {
   const Icon = item.icon;
   return (
     <ListItem disablePadding sx={{ mb: 0.375 }}>
@@ -38,11 +38,12 @@ const NavRow = ({ item }: { item: NavItem }) => {
         component={NavLink}
         to={item.to}
         end={item.to === '/'}
+        onClick={onNavigate}
         sx={{
           borderRadius: 1.5,
           px: 1.5,
           py: 0.75,
-          minHeight: 38,
+          minHeight: { xs: 44, md: 38 },
           color: 'text.secondary',
           transition: 'background 150ms ease, color 150ms ease',
           '&:hover': {
@@ -85,27 +86,11 @@ const NavRow = ({ item }: { item: NavItem }) => {
   );
 };
 
-export const Sidebar = () => {
+const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
   const groups = groupBySection(NAV_ITEMS);
 
   return (
-    <Drawer
-      variant="permanent"
-      PaperProps={{
-        sx: {
-          width: SIDEBAR_WIDTH,
-          bgcolor: 'background.paper',
-          borderRight: (theme) => `1px solid ${theme.palette.divider}`,
-          display: 'flex',
-          flexDirection: 'column',
-        },
-      }}
-      sx={{
-        width: SIDEBAR_WIDTH,
-        flexShrink: 0,
-        '& .MuiDrawer-paper': { width: SIDEBAR_WIDTH, boxSizing: 'border-box' },
-      }}
-    >
+    <>
       {/* Brand */}
       <Stack
         direction="row"
@@ -172,7 +157,7 @@ export const Sidebar = () => {
               idx > 0 && <Divider sx={{ my: 1.25 }} />
             )}
             {group.items.map((item) => (
-              <NavRow key={item.to} item={item} />
+              <NavRow key={item.to} item={item} onNavigate={onNavigate} />
             ))}
           </Box>
         ))}
@@ -191,8 +176,54 @@ export const Sidebar = () => {
           © CLI Software House · Venezuela
         </Typography>
       </Box>
-    </Drawer>
+    </>
   );
 };
+
+type SidebarProps = {
+  /** Drawer móvil abierto (solo aplica < md). */
+  mobileOpen: boolean;
+  onClose: () => void;
+};
+
+const paperSx = {
+  width: SIDEBAR_WIDTH,
+  bgcolor: 'background.paper',
+  display: 'flex',
+  flexDirection: 'column' as const,
+  boxSizing: 'border-box' as const,
+};
+
+export const Sidebar = ({ mobileOpen, onClose }: SidebarProps) => (
+  <>
+    {/* Móvil: drawer temporal con scrim, se cierra al navegar */}
+    <Drawer
+      variant="temporary"
+      open={mobileOpen}
+      onClose={onClose}
+      ModalProps={{ keepMounted: true }}
+      sx={{ display: { xs: 'block', md: 'none' } }}
+      PaperProps={{ sx: paperSx }}
+    >
+      <SidebarContent onNavigate={onClose} />
+    </Drawer>
+
+    {/* Desktop: drawer permanente */}
+    <Drawer
+      variant="permanent"
+      sx={{
+        display: { xs: 'none', md: 'block' },
+        width: SIDEBAR_WIDTH,
+        flexShrink: 0,
+        '& .MuiDrawer-paper': {
+          ...paperSx,
+          borderRight: (theme) => `1px solid ${theme.palette.divider}`,
+        },
+      }}
+    >
+      <SidebarContent />
+    </Drawer>
+  </>
+);
 
 export const SIDEBAR_WIDTH_PX = SIDEBAR_WIDTH;

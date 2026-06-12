@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import AddIcon from '@mui/icons-material/Add';
 import SendIcon from '@mui/icons-material/Send';
+import SearchIcon from '@mui/icons-material/Search';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import LinkIcon from '@mui/icons-material/Link';
 import ReceiptIcon from '@mui/icons-material/Receipt';
@@ -16,13 +17,19 @@ import {
   Stack,
   Alert,
   Button,
+  Select,
   Skeleton,
+  MenuItem,
   TableRow,
   TableCell,
   TableHead,
   TableBody,
+  TextField,
+  InputLabel,
   IconButton,
   Tooltip,
+  FormControl,
+  InputAdornment,
   TableContainer,
   Typography,
 } from '@mui/material';
@@ -40,11 +47,28 @@ const InvoicesPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [linkInvoice, setLinkInvoice] = useState<InvoiceDto | null>(null);
   const [verifyInvoice, setVerifyInvoice] = useState<InvoiceDto | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['invoices'],
     queryFn: () => invoicesApi.list(),
   });
+
+  const filtered = useMemo(() => {
+    if (!data) return undefined;
+    const q = search.trim().toLowerCase();
+    return data.filter((inv) => {
+      if (statusFilter && inv.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        (inv.number ?? '').toLowerCase().includes(q) ||
+        inv.id.toLowerCase().includes(q) ||
+        inv.displayAmount.includes(q) ||
+        (inv.chargedAmount ?? '').includes(q)
+      );
+    });
+  }, [data, search, statusFilter]);
 
   const issueMutation = useMutation({
     mutationFn: (id: string) => invoicesApi.issue(id),
@@ -74,12 +98,36 @@ const InvoicesPage = () => {
       <Card variant="outlined">
         {/* Filter bar / info row */}
         <Box sx={filterBarSx}>
-          <Typography variant="body2" color="text.secondary" fontWeight={500}>
-            Todas las facturas
-          </Typography>
-          {data && (
-            <Typography variant="caption" color="text.disabled" sx={{ ml: 'auto' }}>
-              {data.length} resultado{data.length !== 1 ? 's' : ''}
+          <TextField
+            size="small"
+            placeholder="Buscar por número o monto…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{ minWidth: { xs: '100%', sm: 240 }, flex: { sm: 1 }, maxWidth: { sm: 380 } }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+          <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 170 } }}>
+            <InputLabel>Estado</InputLabel>
+            <Select label="Estado" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <MenuItem value="">Todos</MenuItem>
+              <MenuItem value="draft">Borrador</MenuItem>
+              <MenuItem value="open">Abierta</MenuItem>
+              <MenuItem value="paid">Pagada</MenuItem>
+              <MenuItem value="void">Anulada</MenuItem>
+              <MenuItem value="uncollectible">Incobrable</MenuItem>
+            </Select>
+          </FormControl>
+          {filtered && (
+            <Typography variant="caption" color="text.disabled" sx={{ ml: { sm: 'auto' } }}>
+              {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
             </Typography>
           )}
         </Box>
@@ -101,24 +149,30 @@ const InvoicesPage = () => {
           </Box>
         )}
 
-        {!isLoading && data?.length === 0 && (
+        {!isLoading && filtered?.length === 0 && (
           <Stack alignItems="center" spacing={1.5} sx={{ py: 8 }}>
             <ReceiptIcon sx={{ fontSize: 40, color: 'text.disabled' }} />
             <Box textAlign="center">
-              <Typography variant="subtitle2" fontWeight={600}>Sin facturas todavía</Typography>
+              <Typography variant="subtitle2" fontWeight={600}>
+                {search || statusFilter ? 'Sin resultados para los filtros' : 'Sin facturas todavía'}
+              </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                Crea la primera factura para comenzar a cobrar.
+                {search || statusFilter
+                  ? 'Prueba con otro término o limpia los filtros.'
+                  : 'Crea la primera factura para comenzar a cobrar.'}
               </Typography>
             </Box>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} size="small">
-              Nueva factura
-            </Button>
+            {!search && !statusFilter && (
+              <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} size="small">
+                Nueva factura
+              </Button>
+            )}
           </Stack>
         )}
 
-        {!isLoading && data && data.length > 0 && (
+        {!isLoading && filtered && filtered.length > 0 && (
           <TableContainer>
-            <Table size="small">
+            <Table size="small" sx={{ minWidth: 720 }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: 'background.neutral' }}>
                   <TableCell sx={thSx}>Número</TableCell>
@@ -130,7 +184,7 @@ const InvoicesPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data.map((inv) => (
+                {filtered.map((inv) => (
                   <TableRow key={inv.id} hover sx={{ '&:last-child td': { border: 0 } }}>
                     <TableCell>
                       <Link component={RouterLink} to={`/invoices/${inv.id}`} underline="hover" fontWeight={600}>

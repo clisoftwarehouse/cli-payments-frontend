@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
+import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import {
@@ -17,8 +18,10 @@ import {
   TableHead,
   TableBody,
   InputLabel,
+  TextField,
   FormControl,
   IconButton,
+  InputAdornment,
   TableContainer,
   Typography,
   Link,
@@ -38,16 +41,35 @@ const METHOD_LABEL: Record<string, string> = {
   web_button: 'Tarjeta',
   card_ccr: 'Credicard',
   zelle: 'Zelle',
+  manual: 'Manual',
 };
 
 const PaymentsPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [methodFilter, setMethodFilter] = useState<string>('');
+  const [search, setSearch] = useState('');
   const [detail, setDetail] = useState<PaymentDto | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['payments', { status: statusFilter }],
     queryFn: () => paymentsApi.list({ status: statusFilter || undefined }),
   });
+
+  const filtered = useMemo(() => {
+    if (!data) return undefined;
+    const q = search.trim().toLowerCase();
+    return data.filter((p) => {
+      if (methodFilter && p.methodKind !== methodFilter) return false;
+      if (!q) return true;
+      return (
+        p.id.toLowerCase().includes(q) ||
+        (p.gatewayReference ?? '').toLowerCase().includes(q) ||
+        p.displayAmount.includes(q) ||
+        (p.chargedAmount ?? '').includes(q) ||
+        (p.failureCode ?? '').toLowerCase().includes(q)
+      );
+    });
+  }, [data, search, methodFilter]);
 
   return (
     <Box>
@@ -59,7 +81,23 @@ const PaymentsPage = () => {
       <Card variant="outlined">
         {/* Filter bar */}
         <Box sx={filterBarSx}>
-          <FormControl size="small" sx={{ minWidth: 180 }}>
+          <TextField
+            size="small"
+            placeholder="Buscar por ID, referencia o monto…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{ minWidth: { xs: '100%', sm: 240 }, flex: { sm: 1 }, maxWidth: { sm: 380 } }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+          <FormControl size="small" sx={{ minWidth: { xs: 'calc(50% - 8px)', sm: 160 } }}>
             <InputLabel>Estado</InputLabel>
             <Select label="Estado" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <MenuItem value="">Todos</MenuItem>
@@ -71,9 +109,20 @@ const PaymentsPage = () => {
               <MenuItem value="canceled">Cancelado</MenuItem>
             </Select>
           </FormControl>
-          {data && (
-            <Typography variant="caption" color="text.disabled" sx={{ ml: 'auto' }}>
-              {data.length} resultado{data.length !== 1 ? 's' : ''}
+          <FormControl size="small" sx={{ minWidth: { xs: 'calc(50% - 8px)', sm: 160 } }}>
+            <InputLabel>Método</InputLabel>
+            <Select label="Método" value={methodFilter} onChange={(e) => setMethodFilter(e.target.value)}>
+              <MenuItem value="">Todos</MenuItem>
+              {Object.entries(METHOD_LABEL).map(([value, label]) => (
+                <MenuItem key={value} value={value}>
+                  {label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          {filtered && (
+            <Typography variant="caption" color="text.disabled" sx={{ ml: { sm: 'auto' } }}>
+              {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
             </Typography>
           )}
         </Box>
@@ -90,23 +139,25 @@ const PaymentsPage = () => {
           </Box>
         )}
 
-        {!isLoading && data?.length === 0 && (
+        {!isLoading && filtered?.length === 0 && (
           <Stack alignItems="center" spacing={1.5} sx={{ py: 8 }}>
             <ReceiptLongIcon sx={{ fontSize: 40, color: 'text.disabled' }} />
             <Box textAlign="center">
               <Typography variant="subtitle2" color="text.primary" fontWeight={600}>
-                Sin pagos
+                {search || methodFilter || statusFilter ? 'Sin resultados para los filtros' : 'Sin pagos'}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, maxWidth: 320 }}>
-                Crea una factura, emítela y comparte el link de pago con el cliente.
+                {search || methodFilter || statusFilter
+                  ? 'Prueba con otro término o limpia los filtros.'
+                  : 'Crea una factura, emítela y comparte el link de pago con el cliente.'}
               </Typography>
             </Box>
           </Stack>
         )}
 
-        {!isLoading && data && data.length > 0 && (
+        {!isLoading && filtered && filtered.length > 0 && (
           <TableContainer>
-            <Table size="small">
+            <Table size="small" sx={{ minWidth: 860 }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: 'background.neutral' }}>
                   <TableCell sx={thSx}>ID</TableCell>
@@ -120,7 +171,7 @@ const PaymentsPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data.map((p) => (
+                {filtered.map((p) => (
                   <TableRow key={p.id} hover sx={{ '&:last-child td': { border: 0 } }}>
                     <TableCell>
                       <Link component={RouterLink} to={`/payments/${p.id}`}>

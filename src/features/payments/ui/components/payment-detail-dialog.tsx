@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import {
   Box,
   Stack,
@@ -20,6 +22,8 @@ import { paymentsApi, type PaymentDto } from '../../api/payments-api';
 type Props = { open: boolean; onClose: () => void; payment: PaymentDto };
 
 export const PaymentDetailDialog = ({ open, onClose, payment }: Props) => {
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const { data: attempts, isLoading } = useQuery({
     queryKey: ['payments', payment.id, 'attempts'],
     queryFn: () => paymentsApi.listAttempts(payment.id),
@@ -27,7 +31,7 @@ export const PaymentDetailDialog = ({ open, onClose, payment }: Props) => {
   });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth fullScreen={fullScreen}>
       <DialogTitle>
         Pago <code style={{ fontSize: '0.9em' }}>{payment.id.slice(0, 8)}…</code>{' '}
         <StatusChip variant="payment" status={payment.status} size="small" />

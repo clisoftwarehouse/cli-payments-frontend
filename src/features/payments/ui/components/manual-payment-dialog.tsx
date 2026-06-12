@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
   Box,
@@ -18,6 +20,7 @@ import {
   DialogActions,
 } from '@mui/material';
 
+import { banksApi } from '@/features/banks/api/banks-api';
 import { paymentsApi, type PaymentDto } from '../../api/payments-api';
 
 export type ManualPaymentInvoice = {
@@ -39,6 +42,8 @@ const todayCaracas = () =>
 
 export function ManualPaymentDialog({ invoice, onClose }: Props) {
   const qc = useQueryClient();
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const [tab, setTab] = useState(0);
 
   // Verify form
@@ -53,6 +58,19 @@ export function ManualPaymentDialog({ invoice, onClose }: Props) {
   const [reason, setReason] = useState('');
 
   const [result, setResult] = useState<PaymentDto | null>(null);
+
+  const open = invoice !== null;
+
+  const { data: banks } = useQuery({
+    queryKey: ['banks'],
+    queryFn: () => banksApi.list(),
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const bankOptions = (banks ?? [])
+    .filter((b) => b.isActive && (method === 'transfer' ? b.transferEnabled : true))
+    .map((b) => ({ value: b.ibpCode, label: `${b.shortName ?? b.name} (${b.ibpCode})` }));
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['invoices'] });
@@ -90,11 +108,12 @@ export function ManualPaymentDialog({ invoice, onClose }: Props) {
     onClose();
   };
 
-  const open = invoice !== null;
   const busy = verifyMut.isPending || grantMut.isPending;
+  const verifyDisabled =
+    busy || !originBank || !paymentReference || (method === 'transfer' ? !originDni : !debitPhone);
 
   return (
-    <Dialog open={open} onClose={busy ? undefined : close} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={busy ? undefined : close} maxWidth="sm" fullWidth fullScreen={fullScreen}>
       <DialogTitle>
         Verificación manual de pago
         {invoice && (
@@ -105,9 +124,9 @@ export function ManualPaymentDialog({ invoice, onClose }: Props) {
         )}
       </DialogTitle>
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 3 }}>
-        <Tab label="Verificar con Sitef" />
-        <Tab label="Otorgar manualmente" />
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 3 }} variant={fullScreen ? 'fullWidth' : 'standard'}>
+        <Tab label="Verificar con Sitef" sx={{ minHeight: 44 }} />
+        <Tab label="Otorgar manualmente" sx={{ minHeight: 44 }} />
       </Tabs>
       <Divider />
 
@@ -129,18 +148,72 @@ export function ManualPaymentDialog({ invoice, onClose }: Props) {
             <Typography variant="body2" color="text.secondary">
               Re-verifica un pago que el cliente ya hizo, por su número de referencia. Si Sitef lo encuentra, se otorga la factura.
             </Typography>
-            <TextField select label="Método" value={method} onChange={(e) => setMethod(e.target.value as 'transfer' | 'pago_movil')} size="small">
+            <TextField
+              select
+              label="Método"
+              value={method}
+              onChange={(e) => {
+                setMethod(e.target.value as 'transfer' | 'pago_movil');
+                setOriginBank('');
+              }}
+              size="small"
+            >
               <MenuItem value="transfer">Transferencia bancaria</MenuItem>
               <MenuItem value="pago_movil">Pago Móvil P2P</MenuItem>
             </TextField>
-            <TextField label="Banco origen (código, ej. 0102)" value={originBank} onChange={(e) => setOriginBank(e.target.value)} size="small" />
+            <TextField
+              select
+              label="Banco origen"
+              value={originBank}
+              onChange={(e) => setOriginBank(e.target.value)}
+              size="small"
+              helperText="Banco desde el que pagó el cliente."
+            >
+              {bankOptions.length === 0 && (
+                <MenuItem value="" disabled>
+                  Cargando bancos…
+                </MenuItem>
+              )}
+              {bankOptions.map((b) => (
+                <MenuItem key={b.value} value={b.value}>
+                  {b.label}
+                </MenuItem>
+              ))}
+            </TextField>
             {method === 'transfer' ? (
-              <TextField label="Cédula / RIF del emisor (ej. V12345678)" value={originDni} onChange={(e) => setOriginDni(e.target.value)} size="small" />
+              <TextField
+                label="Cédula / RIF del emisor"
+                placeholder="V12345678"
+                value={originDni}
+                onChange={(e) => setOriginDni(e.target.value)}
+                size="small"
+              />
             ) : (
-              <TextField label="Teléfono del pagador (ej. 584120000000)" value={debitPhone} onChange={(e) => setDebitPhone(e.target.value)} size="small" />
+              <TextField
+                label="Teléfono del pagador"
+                placeholder="584120000000"
+                value={debitPhone}
+                onChange={(e) => setDebitPhone(e.target.value)}
+                size="small"
+                type="tel"
+                helperText="Sin guiones ni espacios."
+              />
             )}
-            <TextField label="Número de referencia" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} size="small" />
-            <TextField label="Fecha de la transacción" type="date" value={trxDate} onChange={(e) => setTrxDate(e.target.value)} size="small" InputLabelProps={{ shrink: true }} />
+            <TextField
+              label="Número de referencia"
+              value={paymentReference}
+              onChange={(e) => setPaymentReference(e.target.value)}
+              size="small"
+              helperText="La referencia que devolvió el banco del cliente."
+            />
+            <TextField
+              label="Fecha de la transacción"
+              type="date"
+              value={trxDate}
+              onChange={(e) => setTrxDate(e.target.value)}
+              size="small"
+              slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: todayCaracas() } }}
+            />
           </Stack>
         )}
 
@@ -168,16 +241,22 @@ export function ManualPaymentDialog({ invoice, onClose }: Props) {
         )}
       </DialogContent>
 
-      <DialogActions>
-        <Button onClick={close} disabled={busy}>
+      <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: 'wrap' }}>
+        <Button onClick={close} disabled={busy} sx={{ minHeight: 44 }}>
           Cerrar
         </Button>
         {tab === 0 ? (
-          <Button variant="contained" onClick={() => verifyMut.mutate()} disabled={busy || !originBank || !paymentReference}>
+          <Button variant="contained" onClick={() => verifyMut.mutate()} disabled={verifyDisabled} sx={{ minHeight: 44, flex: { xs: 1, sm: 'initial' } }}>
             {verifyMut.isPending ? 'Verificando…' : 'Verificar'}
           </Button>
         ) : (
-          <Button color="warning" variant="contained" onClick={() => grantMut.mutate()} disabled={busy || reason.trim().length < 3}>
+          <Button
+            color="warning"
+            variant="contained"
+            onClick={() => grantMut.mutate()}
+            disabled={busy || reason.trim().length < 3}
+            sx={{ minHeight: 44, flex: { xs: 1, sm: 'initial' } }}
+          >
             {grantMut.isPending ? 'Otorgando…' : 'Marcar pagada (manual)'}
           </Button>
         )}
